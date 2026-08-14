@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, Calendar, ImageIcon } from 'lucide-react'
+import { Plus, Calendar } from 'lucide-react'
 import Layout from '../components/Layout'
 import { STAGES } from '../lib/stages'
 import { useContentItems } from '../hooks/useContentItems'
@@ -95,10 +95,7 @@ export default function Pipeline() {
                   >
                     <p className="text-sm font-semibold text-brand-900 line-clamp-2">{item.title}</p>
                     {item.platform && (
-                      <p className="text-[11px] text-brand-500 mt-1 flex items-center gap-1">
-                        {item.platform}
-                        {item.media_url && <ImageIcon size={11} className="text-brand-400" />}
-                      </p>
+                      <p className="text-[11px] text-brand-500 mt-1">{item.platform}</p>
                     )}
                     <div className="flex items-center justify-between mt-2.5">
                       <div className="flex items-center gap-1 text-[11px] text-brand-400">
