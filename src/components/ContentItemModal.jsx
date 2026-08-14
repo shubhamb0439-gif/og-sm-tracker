@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react'
-import { X, Trash2 } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { X, Trash2, ImagePlus } from 'lucide-react'
 import { STAGES, PLATFORMS } from '../lib/stages'
 import { useProfiles } from '../hooks/useProfiles'
+import { useAuth } from '../context/AuthContext'
+import { deleteMedia, mediaKind, uploadMedia } from '../lib/media'
 
 const emptyForm = {
   title: '',
@@ -14,9 +16,15 @@ const emptyForm = {
 }
 
 export default function ContentItemModal({ open, onClose, onSave, onDelete, item }) {
+  const { user } = useAuth()
   const profiles = useProfiles()
   const [form, setForm] = useState(emptyForm)
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const [file, setFile] = useState(null)
+  const [filePreview, setFilePreview] = useState(null)
+  const [removeMedia, setRemoveMedia] = useState(false)
+  const fileInputRef = useRef(null)
 
   useEffect(() => {
     if (item) {
@@ -32,19 +40,70 @@ export default function ContentItemModal({ open, onClose, onSave, onDelete, item
     } else {
       setForm(emptyForm)
     }
+    setError('')
+    setFile(null)
+    setRemoveMedia(false)
   }, [item, open])
+
+  useEffect(() => {
+    if (!file) {
+      setFilePreview(null)
+      return
+    }
+    const url = URL.createObjectURL(file)
+    setFilePreview(url)
+    return () => URL.revokeObjectURL(url)
+  }, [file])
 
   if (!open) return null
 
+  const previewUrl = filePreview || (!removeMedia && item?.media_url) || null
+  const previewType = file ? mediaKind(file) : item?.media_type
+
   const handleSubmit = async (e) => {
     e.preventDefault()
+    setError('')
     setSaving(true)
     try {
-      const payload = { ...form, assigned_to: form.assigned_to || null }
+      let media = {
+        media_url: item?.media_url ?? null,
+        media_path: item?.media_path ?? null,
+        media_type: item?.media_type ?? null,
+      }
+
+      if (removeMedia && !file) {
+        await deleteMedia(item?.media_path)
+        media = { media_url: null, media_path: null, media_type: null }
+      }
+
+      if (file) {
+        await deleteMedia(item?.media_path)
+        media = await uploadMedia(file, user.id)
+      }
+
+      const payload = {
+        ...form,
+        shoot_date: form.shoot_date || null,
+        upload_date: form.upload_date || null,
+        assigned_to: form.assigned_to || null,
+        ...media,
+      }
       await onSave(payload, item?.id)
       onClose()
+    } catch (err) {
+      setError(err.message || 'Something went wrong — please try again.')
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    setError('')
+    try {
+      await onDelete(item.id)
+      onClose()
+    } catch (err) {
+      setError(err.message || 'Could not delete this item — please try again.')
     }
   }
 
@@ -83,6 +142,52 @@ export default function ContentItemModal({ open, onClose, onSave, onDelete, item
               onChange={(e) => setForm({ ...form, description: e.target.value })}
               placeholder="Brief, caption ideas, notes…"
             />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-brand-700 mb-1">Attachment</label>
+            {previewUrl ? (
+              <div className="relative rounded-lg overflow-hidden border border-brand-200 bg-brand-50">
+                {previewType === 'video' ? (
+                  <video src={previewUrl} controls className="w-full max-h-48 object-contain" />
+                ) : (
+                  <img src={previewUrl} alt="Attachment preview" className="w-full max-h-48 object-contain" />
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (file) {
+                      setFile(null)
+                      if (fileInputRef.current) fileInputRef.current.value = ''
+                    } else {
+                      setRemoveMedia(true)
+                    }
+                  }}
+                  className="absolute top-2 right-2 bg-white/90 rounded-full p-1 text-brand-600 hover:text-rose-600 shadow"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            ) : (
+              <label className="flex flex-col items-center justify-center gap-1.5 border border-dashed border-brand-200 rounded-lg py-6 text-brand-400 hover:bg-brand-50 cursor-pointer text-xs">
+                <ImagePlus size={20} />
+                Click to add an image or video
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*,video/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0]
+                    if (f) {
+                      setFile(f)
+                      setRemoveMedia(false)
+                    }
+                  }}
+                />
+              </label>
+            )}
+            <p className="text-[11px] text-brand-400 mt-1">Image or video, up to 100MB.</p>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -153,14 +258,13 @@ export default function ContentItemModal({ open, onClose, onSave, onDelete, item
             </select>
           </div>
 
+          {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
+
           <div className="flex items-center justify-between pt-2">
             {item ? (
               <button
                 type="button"
-                onClick={async () => {
-                  await onDelete(item.id)
-                  onClose()
-                }}
+                onClick={handleDelete}
                 className="flex items-center gap-1.5 text-sm font-medium text-rose-600 hover:text-rose-700"
               >
                 <Trash2 size={15} /> Delete

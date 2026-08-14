@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
+import { deleteMedia } from '../lib/media'
 
 export function useContentItems() {
   const [items, setItems] = useState([])
@@ -36,16 +37,21 @@ export function useContentItems() {
       .from('content_items')
       .insert([{ ...payload, created_by: userId }])
     if (error) throw error
+    await fetchItems()
   }
 
   const updateItem = async (id, payload) => {
     const { error } = await supabase.from('content_items').update(payload).eq('id', id)
     if (error) throw error
+    await fetchItems()
   }
 
   const deleteItem = async (id) => {
+    const target = items.find((i) => i.id === id)
     const { error } = await supabase.from('content_items').delete().eq('id', id)
     if (error) throw error
+    if (target?.media_path) await deleteMedia(target.media_path)
+    await fetchItems()
   }
 
   return { items, loading, error, addItem, updateItem, deleteItem, refresh: fetchItems }

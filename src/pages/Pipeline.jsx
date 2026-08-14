@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, Calendar } from 'lucide-react'
+import { Plus, Calendar, ImageIcon } from 'lucide-react'
 import Layout from '../components/Layout'
 import { STAGES } from '../lib/stages'
 import { useContentItems } from '../hooks/useContentItems'
@@ -14,6 +14,7 @@ export default function Pipeline() {
   const [modalOpen, setModalOpen] = useState(false)
   const [activeItem, setActiveItem] = useState(null)
   const [dragOverStage, setDragOverStage] = useState(null)
+  const [boardError, setBoardError] = useState('')
 
   const handleSave = async (payload, id) => {
     if (id) await updateItem(id, payload)
@@ -21,15 +22,26 @@ export default function Pipeline() {
   }
 
   const handleStageChange = async (id, stage) => {
-    await updateItem(id, { stage })
-    setActiveItem((prev) => (prev && prev.id === id ? { ...prev, stage } : prev))
+    setBoardError('')
+    try {
+      await updateItem(id, { stage })
+      setActiveItem((prev) => (prev && prev.id === id ? { ...prev, stage } : prev))
+    } catch (err) {
+      setBoardError(err.message || 'Could not update the stage. Please try again.')
+    }
   }
 
   const handleDrop = (stage) => async (e) => {
     e.preventDefault()
     setDragOverStage(null)
     const id = e.dataTransfer.getData('text/plain')
-    if (id) await updateItem(id, { stage })
+    if (!id) return
+    setBoardError('')
+    try {
+      await updateItem(id, { stage })
+    } catch (err) {
+      setBoardError(err.message || 'Could not move the card. Please try again.')
+    }
   }
 
   return (
@@ -45,6 +57,10 @@ export default function Pipeline() {
           <Plus size={16} /> New content
         </button>
       </div>
+
+      {boardError && (
+        <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2 mb-4">{boardError}</p>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {STAGES.map((stage) => {
@@ -79,7 +95,10 @@ export default function Pipeline() {
                   >
                     <p className="text-sm font-semibold text-brand-900 line-clamp-2">{item.title}</p>
                     {item.platform && (
-                      <p className="text-[11px] text-brand-500 mt-1">{item.platform}</p>
+                      <p className="text-[11px] text-brand-500 mt-1 flex items-center gap-1">
+                        {item.platform}
+                        {item.media_url && <ImageIcon size={11} className="text-brand-400" />}
+                      </p>
                     )}
                     <div className="flex items-center justify-between mt-2.5">
                       <div className="flex items-center gap-1 text-[11px] text-brand-400">

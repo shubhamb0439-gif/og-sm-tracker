@@ -24,6 +24,16 @@ export default function PipelineDetail({ item, onClose, onStageChange, onDelete 
         </div>
 
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
+          {item.media_url && (
+            <div className="rounded-xl overflow-hidden border border-brand-100 bg-brand-50">
+              {item.media_type === 'video' ? (
+                <video src={item.media_url} controls className="w-full max-h-64 object-contain" />
+              ) : (
+                <img src={item.media_url} alt={item.title} className="w-full max-h-64 object-contain" />
+              )}
+            </div>
+          )}
+
           {item.description && (
             <p className="text-sm text-brand-700 whitespace-pre-wrap">{item.description}</p>
           )}
