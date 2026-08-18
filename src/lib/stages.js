@@ -18,5 +18,6 @@ export const PLATFORMS = [
   'LinkedIn',
   'X / Twitter',
   'Pinterest',
+  'Display TV',
   'Other',
 ]
