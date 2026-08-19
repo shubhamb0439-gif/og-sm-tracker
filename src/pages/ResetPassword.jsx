@@ -1,21 +1,25 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import Logo from '../components/Logo'
 import { useAuth } from '../context/AuthContext'
 
-export default function Login() {
-  const { signIn } = useAuth()
+export default function ResetPassword() {
+  const { updatePassword } = useAuth()
   const navigate = useNavigate()
-  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.')
+      return
+    }
     setLoading(true)
-    const { error } = await signIn({ email, password })
+    const { error } = await updatePassword(password)
     setLoading(false)
     if (error) {
       setError(error.message)
@@ -31,54 +35,44 @@ export default function Login() {
           <Logo className="h-14 w-auto" showWordmark={false} />
         </div>
         <div className="card p-7">
-          <h1 className="text-xl font-bold text-brand-900 text-center">Welcome back</h1>
+          <h1 className="text-xl font-bold text-brand-900 text-center">Set a new password</h1>
           <p className="text-sm text-brand-500 text-center mt-1 mb-6">
-            Log in to the OG Social content tracker
+            Choose a new password for your account
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold text-brand-700 mb-1">Email</label>
-              <input
-                type="email"
-                required
-                className="input"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-              />
-            </div>
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="block text-xs font-semibold text-brand-700">Password</label>
-                <Link to="/forgot-password" className="text-xs font-semibold text-brand-700 hover:underline">
-                  Forgot password?
-                </Link>
-              </div>
+              <label className="block text-xs font-semibold text-brand-700 mb-1">New password</label>
               <input
                 type="password"
                 required
+                minLength={6}
                 className="input"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
+                placeholder="At least 6 characters"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-brand-700 mb-1">Confirm password</label>
+              <input
+                type="password"
+                required
+                minLength={6}
+                className="input"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Re-enter password"
               />
             </div>
 
             {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
 
             <button type="submit" disabled={loading} className="btn-primary w-full">
-              {loading ? 'Logging in…' : 'Log in'}
+              {loading ? 'Saving…' : 'Save new password'}
             </button>
           </form>
         </div>
-
-        <p className="text-center text-sm text-brand-600 mt-5">
-          New here?{' '}
-          <Link to="/signup" className="font-semibold text-brand-800 hover:underline">
-            Create an account
-          </Link>
-        </p>
       </div>
     </div>
   )
